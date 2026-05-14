@@ -9,7 +9,7 @@
 
 ## 🌐 Live Demo
 
-👉 [Visit Website]()
+👉 [Visit Website](https://terminalmind.github.io/SecurePassAI/)
 
 ## 🚀 Features
 
@@ -105,7 +105,7 @@ Your security is the priority:
 
 1. Clone the repository to your local machine.
 ```bash
-git clone https://github.com/your-username/password-strength-tool.git
+git clone https://github.com/your-username/SecurePassAI.git
 ```
 
 2. Open `index.html` in any modern web browser.

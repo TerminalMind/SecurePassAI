@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>SecurePass AI</title>
+  <meta
+    name="description"
+    content="A cybersecurity awareness tool that tests password strength using zxcvbn, custom security checks, and Have I Been Pwned? breached password detection."
+  />
+
+  <script>
+    const savedTheme = localStorage.getItem("theme");
+
+    if (
+      savedTheme === "dark" ||
+      (!savedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches)
+    ) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  </script>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            cyber: {
+              dark: "#020617",
+              panel: "#0f172a",
+              card: "#111827",
+              border: "#334155",
+              blue: "#38bdf8",
+              green: "#22c55e",
+              yellow: "#eab308",
+              orange: "#f97316",
+              red: "#ef4444"
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <script
+    defer
+    src="https://cdnjs.cloudflare.com/ajax/libs/zxcvbn/4.4.2/zxcvbn.js">
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <link rel="manifest" href="manifest.json">
+
+  <script defer src="app.js"></script>
+</head>
+
+<body class="min-h-screen bg-slate-100 text-slate-900 transition-colors dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 dark:text-slate-100">
+  <main class="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 py-10">
+    <section class="w-full rounded-3xl border border-slate-300 bg-white/90 p-6 shadow-2xl backdrop-blur transition-colors dark:border-slate-700 dark:bg-slate-950/80 md:p-10">
+      <header class="mb-8 text-center">
+        <div class="mb-4 flex justify-center">
+          <button
+            id="themeToggleBtn"
+            type="button"
+            class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+          >
+            Switch Theme
+          </button>
+        </div>
+
+        <h1 class="text-3xl font-bold tracking-tight md:text-5xl">
+          Password Strength Testing Tool
+        </h1>
+
+        <p class="mx-auto mt-4 max-w-3xl text-slate-600 dark:text-slate-400">
+          Test password strength using
+          <strong class="text-slate-900 dark:text-slate-200">zxcvbn</strong>,
+          custom security checks, crack-time estimates, and
+          <strong class="text-slate-900 dark:text-slate-200">Have I Been Pwned</strong>
+          breach detection.
+        </p>
+      </header>
+
+      <div class="grid gap-6 lg:grid-cols-5">
+        <section class="rounded-2xl border border-slate-300 bg-slate-50 p-5 transition-colors dark:border-slate-700 dark:bg-slate-900/80 lg:col-span-3">
+          
+          <label for="passwordInput" class="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
+            Enter Password
+          </label>
+
+          <div class="flex flex-col gap-3 sm:flex-row">
+            <input
+              id="passwordInput"
+              type="password"
+              autocomplete="new-password"
+              placeholder="Type a password to analyze"
+              class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-400/30 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500"
+            />
+
+            <button
+              id="togglePasswordBtn"
+              type="button"
+              class="rounded-xl bg-slate-700 px-5 py-3 font-semibold text-white transition hover:bg-slate-600"
+            >
+              Show
+            </button>
+          </div>
+
+          <div class="mt-6">
+            <div class="mb-2 flex items-center justify-between">
+              <span class="text-sm text-slate-600 dark:text-slate-400">Strength Meter</span>
+              <span id="scoreText" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Not tested</span>
+            </div>
+
+            <div class="h-4 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+              <div
+                id="strengthBar"
+                class="h-full w-0 rounded-full transition-all duration-300">
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 rounded-2xl border border-slate-300 bg-white p-5 transition-colors dark:border-slate-700 dark:bg-slate-950">
+            <h2 id="strengthLabel" class="text-2xl font-bold text-slate-700 dark:text-slate-300">
+              Strength: Not Tested
+            </h2>
+
+            <p id="strengthSummary" class="mt-2 text-slate-600 dark:text-slate-400">
+              Start typing a password to receive an analysis.
+            </p>
+
+            <div class="mt-5 grid gap-3 sm:grid-cols-3">
+              <div class="rounded-xl border border-slate-300 bg-slate-50 p-4 text-center dark:border-slate-700 dark:bg-slate-900">
+                <p class="text-xs uppercase tracking-wide text-slate-500">Length</p>
+                <p id="lengthValue" class="mt-1 text-xl font-bold">0</p>
+              </div>
+
+              <div class="rounded-xl border border-slate-300 bg-slate-50 p-4 text-center dark:border-slate-700 dark:bg-slate-900">
+                <p class="text-xs uppercase tracking-wide text-slate-500">Entropy</p>
+                <p id="entropyValue" class="mt-1 text-xl font-bold">0 bits</p>
+              </div>
+
+              <div class="rounded-xl border border-slate-300 bg-slate-50 p-4 text-center dark:border-slate-700 dark:bg-slate-900">
+                <p class="text-xs uppercase tracking-wide text-slate-500">zxcvbn Score</p>
+                <p id="zxcvbnScoreValue" class="mt-1 text-xl font-bold">0 / 4</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 rounded-2xl border border-slate-300 bg-white p-5 transition-colors dark:border-slate-700 dark:bg-slate-950">
+            <h3 class="text-lg font-bold">Estimated Crack Time</h3>
+
+            <div class="mt-4 grid gap-3 md:grid-cols-2">
+              <div class="rounded-xl bg-slate-100 p-4 dark:bg-slate-900">
+                <p class="text-sm text-slate-600 dark:text-slate-400">Online throttled attack</p>
+                <p id="onlineCrackTime" class="mt-1 font-semibold">N/A</p>
+              </div>
+
+              <div class="rounded-xl bg-slate-100 p-4 dark:bg-slate-900">
+                <p class="text-sm text-slate-600 dark:text-slate-400">Offline fast hash attack</p>
+                <p id="offlineCrackTime" class="mt-1 font-semibold">N/A</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 rounded-2xl border border-slate-300 bg-white p-5 dark:border-slate-700 dark:bg-slate-950">
+            <h3 class="text-lg font-bold">Attack Simulation</h3>
+            <div class="mt-4 grid gap-3 md:grid-cols-3">
+              <div class="rounded-xl bg-slate-100 p-4 dark:bg-slate-900">
+                <p class="text-sm text-slate-500">Dictionary Attack</p>
+                <p id="dictionaryAttackTime" class="mt-2 font-semibold">N/A</p>
+              </div>
+              <div class="rounded-xl bg-slate-100 p-4 dark:bg-slate-900">
+                <p class="text-sm text-slate-500">GPU Attack</p>
+                <p id="gpuAttackTime" class="mt-2 font-semibold">N/A</p>
+              </div>
+              <div class="rounded-xl bg-slate-100 p-4 dark:bg-slate-900">
+                <p class="text-sm text-slate-500">Quantum Estimate</p>
+                <p id="quantumAttackTime" class="mt-2 font-semibold">N/A</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 rounded-2xl border border-slate-300 bg-white p-5 dark:border-slate-700 dark:bg-slate-950">
+            <h3 class="text-lg font-bold">Entropy Visualization</h3>
+            <div class="mt-4">
+              <canvas id="entropyChart"></canvas>
+            </div>
+          </div>
+
+          <div class="mt-6 rounded-2xl border border-slate-300 bg-white p-5 dark:border-slate-700 dark:bg-slate-950">
+            <h3 class="text-lg font-bold">Language</h3>
+            <select
+              id="languageSelector"
+              class="mt-4 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900 outline-none focus:border-sky-500"
+            >
+              <option value="en">English</option>
+              <option value="hi">Hindi</option>
+              <option value="es">Spanish</option>
+            </select>
+          </div>
+
+          <div
+            id="breachCard"
+            class="mt-6 rounded-2xl border border-slate-300 bg-white p-5 transition-colors dark:border-slate-700 dark:bg-slate-950"
+          >
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 class="text-lg font-bold">Have I Been Pwned Check</h3>
+                <p id="breachStatus" class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Enter a password to check whether it appears in known breaches.
+                </p>
+              </div>
+
+              <label class="flex cursor-pointer items-center gap-2 text-sm font-medium">
+                <input
+                  id="breachCheckToggle"
+                  type="checkbox"
+                  checked
+                  class="h-4 w-4 rounded border-slate-300 text-sky-500 focus:ring-sky-400"
+                />
+                Enable check
+              </label>
+            </div>
+          </div>
+
+          <div class="mt-6 rounded-2xl border border-slate-300 bg-white p-5 dark:border-slate-700 dark:bg-slate-950">
+            <h3 class="text-lg font-bold">AI Password Suggestions</h3>
+            <select
+              id="passwordPurpose"
+              class="mt-4 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900 outline-none focus:border-sky-500"
+            >
+              <option value="general">General Account</option>
+              <option value="banking">Banking</option>
+              <option value="gaming">Gaming</option>
+              <option value="work">Work Account</option>
+              <option value="social">Social Media</option>
+            </select>
+            <button
+              id="generateAiPasswordBtn"
+              class="mt-4 rounded-xl bg-purple-500 px-5 py-3 font-semibold text-white hover:bg-purple-400"
+            >
+              Generate AI Suggestion
+            </button>
+          </div>
+
+        </section>
+
+        <aside class="space-y-6 lg:col-span-2">
+          <section class="rounded-2xl border border-slate-300 bg-slate-50 p-5 transition-colors dark:border-slate-700 dark:bg-slate-900/80">
+            <h2 class="text-xl font-bold">Security Checks</h2>
+
+            <ul id="checksList" class="mt-4 space-y-3 text-sm">
+              <li class="text-slate-500 dark:text-slate-400">No password entered yet.</li>
+            </ul>
+          </section>
+
+          <section class="rounded-2xl border border-slate-300 bg-slate-50 p-5 transition-colors dark:border-slate-700 dark:bg-slate-900/80">
+            <h2 class="text-xl font-bold">Suggestions</h2>
+
+            <ul id="suggestionsList" class="mt-4 space-y-3 text-sm">
+              <li class="text-slate-500 dark:text-slate-400">Suggestions will appear here.</li>
+            </ul>
+          </section>
+
+          <section class="rounded-2xl border border-slate-300 bg-white p-5 transition-colors dark:border-slate-700 dark:bg-slate-950">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 class="text-lg font-bold">Secure Password Generator</h3>
+              </div>
+              <button
+                id="generatePasswordBtn"
+                type="button"
+                class="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-sky-400"
+              >
+                Generate
+              </button>
+            </div>
+          </section>
+
+          <section class="rounded-2xl border border-slate-300 bg-white p-5 dark:border-slate-700 dark:bg-slate-950">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 class="text-lg font-bold">Passphrase Generator</h3>
+              </div>
+              <button
+                id="generatePassphraseBtn"
+                class="rounded-xl bg-green-500 px-5 py-3 font-semibold text-white hover:bg-green-400"
+              >
+                Generate Passphrase
+              </button>
+            </div>
+          </section>
+
+          <section class="rounded-2xl border border-slate-300 bg-white p-5 dark:border-slate-700 dark:bg-slate-950">
+            <h3 class="text-lg font-bold">MFA Advisor</h3>
+            <p id="mfaAdvice" class="mt-3 text-slate-600 dark:text-slate-400">
+              MFA recommendation will appear here.
+            </p>
+          </section>
+
+          <section class="rounded-2xl border border-slate-300 bg-white p-5 dark:border-slate-700 dark:bg-slate-950">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-bold">Security Report</h3>
+              </div>
+              <button
+                id="downloadPdfBtn"
+                class="rounded-xl bg-red-500 px-5 py-3 font-semibold text-white hover:bg-red-400"
+              >
+                Download PDF
+              </button>
+            </div>
+          </section>
+
+          <section class="rounded-2xl border border-sky-400/30 bg-sky-400/10 p-5">
+            <h2 class="text-lg font-bold text-sky-700 dark:text-sky-300">Privacy Notice</h2>
+
+            <p class="mt-2 text-sm leading-6 text-sky-900 dark:text-sky-100/90">
+              This tool analyzes passwords in your browser. Passwords are not sent to your own server.
+              The breach check uses the Have I Been Pwned k-anonymity API.
+            </p>
+          </section>
+        </aside>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
